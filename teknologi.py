@@ -64,15 +64,13 @@ def home():
 def input_data():
     st.header("Input Data")
     fake = Faker()
-
-    # Generate or Upload Data
     choice = st.radio("Pilih cara mendapatkan data:", ["Unggah Dataset", "Hasilkan Data"])
     if choice == "Unggah Dataset":
         uploaded_file = st.file_uploader("Unggah dataset CSV", type=["csv"])
         if uploaded_file:
             try:
                 data = pd.read_csv(uploaded_file)
-                st.session_state['data'] = data  # Save to session state
+                st.session_state['data'] = data 
                 st.write(f"Dataset berisi {data.shape[0]} baris dan {data.shape[1]} kolom.")
                 st.dataframe(data)
             except Exception as e:
@@ -81,15 +79,26 @@ def input_data():
         num_samples = st.slider("Jumlah data yang dihasilkan:", 10, 100, 50)
         data = pd.DataFrame({
             "User_ID": [fake.uuid4() for _ in range(num_samples)],
-            "Daily_Usage_Time (minutes)": np.random.randint(30, 600, num_samples),
-            "Posts_Per_Day": np.random.randint(0, 50, num_samples),
-            "Dominant_Emotion": np.random.choice(["Happy", "Sad", "Angry", "Neutral"], num_samples),
-            "Platform": np.random.choice(["Instagram", "Facebook", "Twitter"], num_samples),
-            "Comment": [fake.sentence(nb_words=10) for _ in range(num_samples)]
+            "Age": np.random.randint(18, 65, num_samples),  
+            "Gender": np.random.choice(["Female", "Male", "Non-binary"], num_samples),  
+            "Platform": np.random.choice(
+                ["Instagram", "Twitter", "Facebook", "LinkedIn", "Snapchat", "Whatsapp", "Telegram"],
+                num_samples
+            ),  
+            "Daily_Usage_Time (minutes)": np.random.randint(30, 600, num_samples),  
+            "Posts_Per_Day": np.random.randint(0, 50, num_samples), 
+            "Likes_Received_Per_Day": np.random.randint(0, 500, num_samples),  
+            "Comments_Received_Per_Day": np.random.randint(0, 200, num_samples),  
+            "Messages_Sent_Per_Day": np.random.randint(0, 100, num_samples), 
+            "Dominant_Emotion": np.random.choice(
+                ["Happiness", "Sadness", "Anger", "Anxiety", "Boredom", "Neutral"],
+                num_samples
+            )  
         })
-        st.session_state['data'] = data  # Save to session state
+        st.session_state['data'] = data  
         st.write(f"Dataset simulasi berisi {data.shape[0]} baris dan {data.shape[1]} kolom.")
         st.dataframe(data)
+
 
 
 def preprocessing():
@@ -97,19 +106,19 @@ def preprocessing():
     if st.session_state['data'] is None:
         st.warning("Harap unggah atau hasilkan data terlebih dahulu.")
     else:
-        # Retrieve data from session state
+        
         data = st.session_state['data']
 
         st.subheader("Statistik Sebelum Preprocessing")
         st.write("Statistik awal dataset:")
         st.dataframe(data.describe(include="all").T)
 
-        # Hapus data duplikat
+        
         st.subheader("Menghapus Data Duplikat")
         data = data.drop_duplicates()
         st.write(f"Jumlah data setelah menghapus duplikat: {data.shape[0]} baris")
 
-        # Mengatasi Nilai Kosong
+       
         st.subheader("Mengatasi Nilai Kosong")
         for col in data.columns:
             if data[col].isnull().sum() > 0:
@@ -118,13 +127,13 @@ def preprocessing():
                 else:
                     data[col].fillna(data[col].mode()[0], inplace=True)
 
-        # Validasi kolom 'Age'
+    
         if 'Age' in data.columns:
             st.subheader("Validasi Kolom 'Age'")
-            data['Age'] = pd.to_numeric(data['Age'], errors='coerce')  # Konversi ke numerik
-            data = data.dropna(subset=['Age'])  # Hapus baris dengan Age NaN
+            data['Age'] = pd.to_numeric(data['Age'], errors='coerce')  
+            data = data.dropna(subset=['Age'])  
 
-        # Validasi kolom 'Gender'
+       
         if 'Gender' in data.columns:
             st.subheader("Validasi Kolom 'Gender'")
             valid_genders = ['Male', 'Female', 'Non-binary']
@@ -134,7 +143,7 @@ def preprocessing():
         st.subheader("Statistik Setelah Preprocessing")
         st.dataframe(data.describe(include="all").T)
 
-        # Save processed data back to session state
+        
         st.session_state['data'] = data
         st.success("Preprocessing selesai!")
 
@@ -146,6 +155,13 @@ def analysis():
     else:
         data = st.session_state['data']
 
+        # Pastikan kolom numerik, termasuk Age, memiliki tipe data numerik
+        if 'Age' in data.columns:
+            data['Age'] = pd.to_numeric(data['Age'], errors='coerce')  # Konversi ke numerik
+            if data['Age'].isnull().sum() > 0:
+                st.warning("Beberapa nilai di kolom 'Age' tidak valid dan telah dihapus.")
+                data = data.dropna(subset=['Age'])  # Hapus nilai NaN di kolom Age
+
         st.subheader("1. Hubungan Media Sosial dengan Emosi")
         platform_emotion = data.groupby('Platform')['Dominant_Emotion'].value_counts(normalize=True).unstack()
         st.write("Berikut adalah proporsi emosi dominan pada tiap platform media sosial:")
@@ -153,36 +169,40 @@ def analysis():
 
         st.write("*Penjelasan:* Angka di tabel di atas mewakili proporsi emosi tertentu pada tiap platform media sosial. Misalnya, 0.40 berarti 40% pengguna pada platform tersebut menunjukkan emosi tersebut.")
 
-        # Hubungan Gender dengan Jumlah Postingan
         st.subheader("2. Hubungan Gender dengan Jumlah Postingan")
         gender_post = data.groupby('Gender')['Posts_Per_Day'].mean().reset_index()
         st.write("Rata-rata jumlah postingan per hari berdasarkan gender:")
         st.dataframe(gender_post)
 
-        st.write("*Penjelasan:* Tabel ini menunjukkan rata-rata jumlah postingan per hari untuk tiap gender. Gender dapat berupa kategori seperti 'Male' atau 'Female'.")
+        st.write("*Penjelasan:* Tabel ini menunjukkan rata-rata jumlah postingan per hari untuk tiap gender. Gender dapat berupa kategori seperti 'Male', 'Female', atau 'Non-binary'.")
 
-        # Analisis 3: Hubungan Umur dengan Jumlah Postingan
         st.subheader("3. Hubungan Umur dengan Jumlah Postingan")
-        if 'Age' in data.columns and data['Age'].dtype in ['float64', 'int64']:
+        if 'Age' in data.columns:
             age_post_corr = data['Age'].corr(data['Posts_Per_Day'])
             st.write(f"Korelasi antara umur dan jumlah postingan per hari adalah *{age_post_corr:.2f}*.")
             st.write("*Penjelasan:* Nilai korelasi berkisar antara -1 hingga 1. Nilai mendekati 1 menunjukkan hubungan positif, sedangkan mendekati -1 menunjukkan hubungan negatif.")
         else:
-            st.warning("Kolom 'Age' tidak tersedia atau bukan numerik.")
+            st.warning("Kolom 'Age' tidak tersedia atau masih mengandung nilai tidak valid.")
 
-        # Analisis 4: Hubungan Like dan Comment dengan Emosi
         st.subheader("4. Hubungan Like dan Komentar dengan Emosi")
-        if 'Likes_Received_Per_Day' in data.columns and 'Comments_Received_Per_Day' in data.columns:
+        if {'Likes_Received_Per_Day', 'Comments_Received_Per_Day'}.issubset(data.columns):
             emotion_metrics = data.groupby('Dominant_Emotion')[['Likes_Received_Per_Day', 'Comments_Received_Per_Day']].mean()
             st.write("Rata-rata jumlah like dan komentar per hari berdasarkan emosi dominan:")
             st.dataframe(emotion_metrics)
             st.write("*Penjelasan:* Tabel ini menunjukkan rata-rata jumlah like dan komentar per hari yang diterima pengguna dengan emosi dominan tertentu.")
+
         st.subheader("Clustering Analysis")
         st.write("Metode yang digunakan: *K-Means Clustering*")
 
-        # Pilih fitur untuk clustering
+        # Pilih fitur numerik untuk clustering
+        numeric_columns = ['Age', 'Daily_Usage_Time (minutes)', 'Posts_Per_Day', 
+                           'Likes_Received_Per_Day', 'Comments_Received_Per_Day', 
+                           'Messages_Sent_Per_Day']
+        if not numeric_columns:
+            st.warning("Tidak ada kolom numerik yang tersedia untuk clustering. Harap periksa kembali data Anda.")
+            return
+
         st.write("Pilih kolom numerik untuk clustering:")
-        numeric_columns = data.select_dtypes(include=['float64', 'int64']).columns.tolist()
         features = st.multiselect("Fitur untuk clustering:", numeric_columns, default=numeric_columns)
 
         if len(features) < 2:
@@ -220,6 +240,7 @@ def analysis():
 
             # Save clustering result
             st.session_state['data'] = data
+
 
 
 def visualizations():
@@ -262,6 +283,36 @@ def visualizations():
         ax.set_ylabel("Rata-Rata")
         st.pyplot(fig)
 
+        st.subheader("5. Visualisasi Cluster Hasil K-Means")
+        if 'Cluster' not in data.columns:
+            st.warning("Analisis clustering belum dilakukan. Silakan lakukan clustering terlebih dahulu pada menu Analysis.")
+        else:
+            st.write("Visualisasi hasil clustering dengan K-Means. Anda dapat memilih dua fitur untuk divisualisasikan.")
+
+            # Pilihan fitur untuk scatter plot
+            features = ['Age', 'Daily_Usage_Time (minutes)', 'Posts_Per_Day', 
+                           'Likes_Received_Per_Day', 'Comments_Received_Per_Day', 
+                           'Messages_Sent_Per_Day']
+            selected_features = st.multiselect("Pilih dua fitur untuk scatter plot:", features, default=features[:2])
+
+            if len(selected_features) != 2:
+                st.warning("Pilih tepat dua fitur untuk scatter plot.")
+            else:
+                fig, ax = plt.subplots(figsize=(8, 6))
+                sns.scatterplot(
+                    x=selected_features[0],
+                    y=selected_features[1],
+                    hue='Cluster',
+                    palette='tab10',
+                    data=data,
+                    ax=ax
+                )
+                ax.set_title(f"Visualisasi Cluster Berdasarkan {selected_features[0]} dan {selected_features[1]}")
+                ax.set_xlabel(selected_features[0])
+                ax.set_ylabel(selected_features[1])
+                st.pyplot(fig)
+
+
 
 def about_us():
     st.header("Tentang Kami")
@@ -278,7 +329,7 @@ def about_us():
     **Teknologi yang digunakan**: Streamlit, Pandas, Scikit-learn, Seaborn, Plotly.
     """)
 
-# Render selected menu
+
 if selected == "Home":
     home()
 elif selected == "Input Data":
